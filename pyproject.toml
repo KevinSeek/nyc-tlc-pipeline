@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Incremental NYC TLC trip ingestion into DuckDB, transformed with dbt, orchestrated by Prefect"
 readme = "README.md"
 requires-python = ">=3.14, <3.15"
-dependencies = []
+dependencies = ["duckdb>=1.5.6", "httpx>=0.28.1, <0.29"]
 
 [project.scripts]
 nyc-tlc-pipeline = "nyc_tlc_pipeline:main"
@@ -12,3 +12,17 @@ nyc-tlc-pipeline = "nyc_tlc_pipeline:main"
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pytest>=9.1.1", "ruff>=0.16.10"]
+
+
+[tool.ruff]
+# Max line length: formatter wraps to this, linter flags longer lines
+line-length = 100
+# Tells ruff which version of python
+target-version = "py314"
+
+[tool.ruff.lint]
+# flags in this order: pycodestyle, pyflakes, import order, bugbear, pyupgrade
+select = ["E", "F", "I", "B", "UP"]
