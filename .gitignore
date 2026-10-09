@@ -1,0 +1,53 @@
+# Data files: data/raw/ (source downloads) and data/quarantine/ (failed files)
+/data/
+
+# Application logs
+*.log
+/logs/
+
+# DuckDB databases, write-ahead logs, and temporary spill directories
+*.duckdb*
+*.wal
+*.tmp/
+
+# dbt-generated artifacts and installed packages
+/dbt/target/
+/dbt/logs/
+/dbt/dbt_packages/
+
+# Environment files, virtual environments, and secrets
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+/secrets/
+/credentials/
+*.pem
+*.key
+
+# Python caches, test output, and build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# VS Code local settings
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+# macOS
+.DS_Store
+
+# AI Guidance Notes
+/instructions
