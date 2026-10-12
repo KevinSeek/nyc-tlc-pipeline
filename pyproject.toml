@@ -7,7 +7,7 @@ requires-python = ">=3.14, <3.15"
 dependencies = ["duckdb>=1.5.6", "httpx>=0.28.1, <0.29"]
 
 [project.scripts]
-nyc-tlc-pipeline = "nyc_tlc_pipeline:main"
+nyc-tlc-pipeline = "nyc_tlc_pipeline.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
