@@ -2,6 +2,8 @@
 
 RAW_SCHEMA = "raw"
 RAW_YELLOW_TAXI_TRIPS_TABLE = "yellow_taxi_trips"
+RAW_TAXI_ZONE_LOOKUP_TABLE = "taxi_zone_lookup"
+
 
 RAW_YELLOW_TAXI_TRIPS_COLUMNS: dict[str, str] = {
     "VendorID": "INTEGER",
@@ -23,4 +25,11 @@ RAW_YELLOW_TAXI_TRIPS_COLUMNS: dict[str, str] = {
     "total_amount": "DOUBLE",
     "congestion_surcharge": "DOUBLE",
     "Airport_fee": "DOUBLE",
+}
+
+RAW_TAXI_ZONE_LOOKUP_COLUMNS: dict[str, str] = {
+    "LocationID": "INTEGER",
+    "Borough": "VARCHAR",
+    "Zone": "VARCHAR",
+    "service_zone": "VARCHAR",
 }
