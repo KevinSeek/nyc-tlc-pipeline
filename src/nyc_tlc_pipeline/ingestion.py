@@ -9,6 +9,11 @@ import httpx
 
 from . import config, schema
 
+YELLOW_TAXI_TRIPS_URL_TEMPLATE = (
+    "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year_month_string}.parquet"
+)
+TAXI_ZONE_LOOKUP_URL = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+
 
 def generate_parsed_and_canonical_date(year_month: str) -> tuple[date, str]:
     # Convert into a datetime type
@@ -17,21 +22,24 @@ def generate_parsed_and_canonical_date(year_month: str) -> tuple[date, str]:
     return parsed_year_month, year_month_string
 
 
-def generate_raw_file_paths(year_month_string: str) -> tuple[Path, Path]:
+def generate_raw_trips_file_paths(raw_dir: Path, year_month_string: str) -> tuple[Path, Path]:
 
-    raw_dir = config.NYC_TLC_DATA_DIR.joinpath("raw")
     act_path = raw_dir.joinpath(f"yellow_tripdata_{year_month_string}.parquet")
     tmp_path = raw_dir.joinpath(f"yellow_tripdata_{year_month_string}.parquet.part")
 
     return (tmp_path, act_path)
 
 
-def download_raw_from_source(year_month_string: str, tmp_path: Path, act_path: Path) -> Path:
+def generate_raw_taxi_zone_paths(raw_dir: Path) -> tuple[Path, Path]:
+    act_path = raw_dir.joinpath("taxi_zone_lookup.csv")
+    tmp_path = raw_dir.joinpath("taxi_zone_lookup.csv.part")
 
-    # Build canonical url
-    url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year_month_string}.parquet"
+    return (tmp_path, act_path)
 
-    # Create the paths
+
+def download_raw_from_source(url: str, tmp_path: Path, act_path: Path) -> Path:
+
+    # Create the directory
     tmp_path.parent.mkdir(parents=True, exist_ok=True)
 
     time_out = httpx.Timeout(config.NYC_TLC_HTTP_READ_TIMEOUT_IN_SECONDS, connect=5)
@@ -48,7 +56,7 @@ def download_raw_from_source(year_month_string: str, tmp_path: Path, act_path: P
     return act_path
 
 
-def load_raw_to_duckdb(parquet_path: Path, source_month: date) -> int:
+def load_raw_trips_to_duckdb(parquet_path: Path, source_month: date) -> int:
 
     # Read and get the hashvalue of the file
     with parquet_path.open("rb") as f:
@@ -85,5 +93,37 @@ def load_raw_to_duckdb(parquet_path: Path, source_month: date) -> int:
                 source_month,
                 str(parquet_path),
             ],
+        )
+        return con.execute(f"SELECT count(*) FROM {tbl_name}").fetchone()[0]
+
+
+def load_raw_zone_lookup_to_duckdb(csv_path: Path) -> int:
+    # Read and get the hash value of the file
+    with csv_path.open("rb") as f:
+        digest = hashlib.file_digest(f, "sha256").hexdigest()
+
+    # Create casting statement from dictionary
+    cast_list = ", ".join(
+        [
+            f'CAST("{key}" AS {data_type}) AS "{key}"'
+            for key, data_type in schema.RAW_TAXI_ZONE_LOOKUP_COLUMNS.items()
+        ]
+    )
+
+    tbl_name = f"{schema.RAW_SCHEMA}.{schema.RAW_TAXI_ZONE_LOOKUP_TABLE}"
+    sql_stmt = f"""
+    CREATE OR REPLACE TABLE {tbl_name} AS
+        SELECT {cast_list},
+        ? AS _file_sha256,
+        ? AS _source_file,
+        ? AS _loaded_at
+    FROM read_csv(?, all_varchar=true, header=true);
+    """
+
+    with duckdb.connect(str(config.NYC_TLC_DUCKDB_PATH)) as con:
+        con.execute(f"""CREATE SCHEMA IF NOT EXISTS {schema.RAW_SCHEMA};""")
+        con.execute(
+            sql_stmt,
+            parameters=[digest, csv_path.name, datetime.now(UTC), str(csv_path)],
         )
         return con.execute(f"SELECT count(*) FROM {tbl_name}").fetchone()[0]
