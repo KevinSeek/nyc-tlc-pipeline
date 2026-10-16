@@ -5,6 +5,7 @@ import pathlib
 
 
 def get_env_path(env_var: str, default: str) -> pathlib.Path:
+    """Helper function for filesystem path only."""
     return pathlib.Path(os.environ.get(env_var, default))
 
 
@@ -14,3 +15,5 @@ NYC_TLC_HTTP_READ_TIMEOUT_IN_SECONDS = int(
 NYC_TLC_DUCKDB_PATH = get_env_path("NYC_TLC_DUCKDB_PATH", "nyc_tlc.duckdb")
 NYC_TLC_DATA_DIR = get_env_path("NYC_TLC_DATA_DIR", "data")
 RAW_DATA_DIR = NYC_TLC_DATA_DIR.joinpath("raw")
+
+NYC_TLC_IMAGE_SHA = os.environ.get("NYC_TLC_IMAGE_SHA", "local")

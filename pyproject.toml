@@ -4,10 +4,11 @@ version = "0.1.0"
 description = "Incremental NYC TLC trip ingestion into DuckDB, transformed with dbt, orchestrated by Prefect"
 readme = "README.md"
 requires-python = ">=3.14, <3.15"
-dependencies = ["duckdb>=1.5.6", "httpx>=0.28.1, <0.29"]
+dependencies = ["duckdb>=1.5.6", "httpx>=0.28.1, <0.29", "prefect>=3.8.8"]
 
 [project.scripts]
 nyc-tlc-pipeline = "nyc_tlc_pipeline.cli:main"
+nyc-tlc-smoke = "nyc_tlc_pipeline.flows:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
