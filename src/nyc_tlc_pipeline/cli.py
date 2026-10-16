@@ -1,4 +1,3 @@
-import os
 import argparse
 
 from .config import RAW_DATA_DIR
