@@ -1,0 +1,31 @@
+name: nyc-tlc # project name -> volume becomes "nyc-tlc-prefect", whatever the folder is called.
+
+services:
+  prefect-server:
+    image: prefecthq/prefect:3.8.8-python3.13 # must match with `prefect` in `uv.lock`
+    command: prefect server start
+    environment:
+      PREFECT_HOME: /var/lib/prefect # server state (SQLite) goes here -> on the volume
+      PREFECT_SERVER_API_HOST: 0.0.0.0 # Listen to other containers, not only itself
+      PREFECT_SERVER_UI_API_URL: http://localhost:4200/api # address the *browser on Mac* uses (via ssh -L)
+    volumes:
+      - prefect:/var/lib/prefect # plug volume "prefect" in at PREFECT_HOME
+    ports:
+      - "127.0.0.1:4200:4200" # labby loopback only; quoted so YAML keeps it a string
+    healthcheck:
+      # Run INSIDE this container; image has python, not curl
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=1)",
+        ]
+      interval: 10s # Check every 10s
+      timeout: 5s # one check fails if it takes longer than this
+      retries: 5 # 5 failures in a row -> 'unhealthy'
+      start_period: 30s # failures during startup don't count
+    restart: unless-stopped # comes back after a labby reboot, unless you stopped it manually
+
+volumes:
+  prefect: # declared here, empty value
