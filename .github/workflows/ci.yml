@@ -3,9 +3,20 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
+
+# Define at the root level for workflow-wide scope
+env:
+  IMAGE: "ghcr.io/kevinseek/nyc-tlc-pipeline"
+
+concurrency:
+  # Runs with same string share same queue
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint-and-test:
@@ -20,3 +31,29 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: "Check out repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "docker build"
+        run: |
+          docker build --platform linux/amd64 \
+          --build-arg NYC_TLC_IMAGE_SHA="$GITHUB_SHA" \
+          -t "$IMAGE:$GITHUB_SHA" \
+          -t "$IMAGE:main" \
+          .
+      - name: "login to docker"
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: "Execute push to GHCR"
+        run: |
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:main"
