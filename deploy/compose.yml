@@ -27,5 +27,19 @@ services:
       start_period: 30s # failures during startup don't count
     restart: unless-stopped # comes back after a labby reboot, unless you stopped it manually
 
+  pipeline:
+    image: ghcr.io/kevinseek/nyc-tlc-pipeline:${IMAGE_TAG:?IMAGE_TAG must be set in .env} # main by default; pin a SHA to roll back
+    command: ["nyc-tlc-smoke"] # overrides the image CMD (nyc-tlc-pipeline --help)
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api # service name resolves via Compose DNS; container IPs change on recreate
+    volumes:
+      - nyc_tlc_pipeline:/data # empty named volume copies /data and its app:app ownership from the image on first mount
+    depends_on:
+      prefect-server:
+        condition: service_healthy # wait for the healthcheck to pass, not just for the container to start
+    profiles: [manual] # skipped by `up -d`; started only when named: `docker compose run --rm pipeline`
+    restart: "no" # one-off job: exits 0 or 1 and stays exited; quoted because bare no is a YAML boolean
+
 volumes:
   prefect: # declared here, empty value
+  nyc_tlc_pipeline: # DuckDB + raw files; full name on labby: nyc-tlc_nyc_tlc_pipeline
