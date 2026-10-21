@@ -1,4 +1,4 @@
-name: nyc-tlc # project name -> volume becomes "nyc-tlc-prefect", whatever the folder is called.
+name: nyc-tlc # project name -> volume becomes "nyc-tlc_prefect", whatever the folder is called.
 
 services:
   prefect-server:
