@@ -78,7 +78,7 @@ Anything else → `docs/LATER.md`. Not built.
 ### Deployment decisions (locked)
 - **Pull-based, automated.** The homelab pulls from GHCR on a timer. No manual SSH deploys, no self-hosted runner, no inbound exposure.
 - **Image tags:** an immutable SHA tag per build plus a moving `main` tag. The homelab follows `main`.
-- **Rollback:** pin a SHA in `.env`, then `docker compose up -d`.
+- **Rollback:** pin a full commit SHA as `IMAGE_TAG` in `.env`; the next timer tick runs that image's smoke flow (or `docker compose run --rm pipeline` to run it now). Unpin to return to `main`. See `docs/decisions/0003-pull-based-deploy.md`.
 - **Deploy script:** a small systemd timer + shell script, written by me, not Watchtower.
 - **Done means it ran:** a deploy only counts if the smoke flow run succeeds and the result is logged. Prefect UI run history is the evidence.
 
