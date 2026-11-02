@@ -1,8 +1,8 @@
 # nyc-tlc-pipeline — Project Charter
 
-**Status:** FROZEN as of 2026-10-09
+**Status:** FROZEN as of 2026-10-09; amended 2026-11-02 (end date, `docs/decisions/0004-end-date-foundation.md`)
 **Owner:** Kevin
-**Target completion:** 2026-11-15 (Sunday)
+**Target completion:** 2026-12-06 (Sunday)
 
 > Monthly NYC TLC trip files ingested incrementally into a DuckDB warehouse, transformed and tested with dbt, orchestrated by Prefect, shipped as a Docker image via GitHub Actions, and run on a schedule in the homelab.
 
@@ -26,7 +26,7 @@
 - Source: [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
 - **Yellow taxi only**, **2024-01 onward**, plus the taxi zone lookup CSV.
 
-### Out of scope until after 2026-11-15
+### Out of scope until after 2026-12-06
 Dashboards · semantic layer / metrics · ML · green / FHV / HVFHV data · cloud deployment · data contract tooling · push-based deploy / self-hosted runner · Cloudflare Tunnel (separate homelab task)
 
 Anything else → `docs/LATER.md`. Not built.
@@ -35,7 +35,7 @@ Anything else → `docs/LATER.md`. Not built.
 
 ## 2. Ownership rules
 
-1. **This charter is frozen.** New ideas, including AI suggestions, go to `docs/LATER.md` with one line on why. Nothing in `docs/LATER.md` gets built before 2026-11-15.
+1. **This charter is frozen.** New ideas, including AI suggestions, go to `docs/LATER.md` with one line on why. Nothing in `docs/LATER.md` gets built before 2026-12-06.
 2. **No unexplained code merges.** If I can't explain a line, it doesn't go in.
 3. **Every test justifies itself.** Before adding a test, write the failure it prevents in one line (in the test description or a comment). If I can't, the test is dropped.
 4. **Weekly decision note.** End each week with a ~150-word note in `docs/decisions/` (template: `docs/decisions/0000-template.md`).
@@ -90,9 +90,10 @@ Anything else → `docs/LATER.md`. Not built.
 |---|---|---|
 | 1 | Oct 12–18 | Charter committed, repo scaffold, single-month ingestion + zone lookup |
 | 2 | Oct 19–25 | **Walking skeleton:** CI → GHCR → homelab timer pulls + runs a dummy flow |
-| 3 | Oct 26–Nov 1 | Manifest, idempotent reruns, backfill, load-time validation, pytest |
-| 4 | Nov 2–8 | dbt staging / intermediate / marts, tests, source freshness |
-| 5 | Nov 9–15 | Real Prefect flow + schedule, smoke test, README with architecture diagram |
+| 2b | Oct 26–Nov 15 | **Foundation:** rewrite Week 2 files from blank, explain every line, fix injected faults (no merge) |
+| 3 | Nov 16–22 | Manifest, idempotent reruns, backfill, load-time validation, pytest |
+| 4 | Nov 23–29 | dbt staging / intermediate / marts, tests, source freshness |
+| 5 | Nov 30–Dec 6 | Real Prefect flow + schedule, smoke test, README with architecture diagram |
 
 **Checkpoint:** if the walking skeleton is not running on the homelab by **Oct 28**, stop and fix it before any further feature work.
 
@@ -107,7 +108,7 @@ Ingestion · manifest · image build to GHCR · scheduled homelab run
 
 ---
 
-## 5. Definition of done (2026-11-15)
+## 5. Definition of done (2026-12-06)
 
 - [ ] A fresh month can be ingested, re-run without duplicates, and backfilled by parameter
 - [ ] A bad file is quarantined, not loaded
