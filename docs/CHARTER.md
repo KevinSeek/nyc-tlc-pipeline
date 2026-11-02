@@ -90,7 +90,7 @@ Anything else → `docs/LATER.md`. Not built.
 |---|---|---|
 | 1 | Oct 12–18 | Charter committed, repo scaffold, single-month ingestion + zone lookup |
 | 2 | Oct 19–25 | **Walking skeleton:** CI → GHCR → homelab timer pulls + runs a dummy flow |
-| 2b | Oct 26–Nov 15 | **Foundation:** rewrite Week 2 files from blank, explain every line, fix injected faults (no merge) |
+| 2b | Oct 26–Nov 15 | **Foundation:** rewrite Week 2 files from blank, explain every line, fix injected faults (no merge; comment-only updates allowed — note 0004) |
 | 3 | Nov 16–22 | Manifest, idempotent reruns, backfill, load-time validation, pytest |
 | 4 | Nov 23–29 | dbt staging / intermediate / marts, tests, source freshness |
 | 5 | Nov 30–Dec 6 | Real Prefect flow + schedule, smoke test, README with architecture diagram |
