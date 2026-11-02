@@ -1,61 +1,76 @@
-# Base image: Python 3.14 on Debian 13 (trixie); trixie pinned so a new Debian release can't change the OS silently.
+# Base Image: Python 3.14 on Debian 13 (trixie); trixie pinned so a new Debian release can't change the OS silently 
+# but tag still moves for Debian point & security releases and Python patch updates.
 FROM python:3.14-slim-trixie
 
-# Copy the uv binary from Astral's image (pinned to 0.13.1) into /bin, which is already on PATH.
+# Copy the uv binary from Astral's image (pinned to 0.13.1) into /bin
+# COPY --from=<other image> <path inside OTHER image> <path inside MY image>
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /bin/
 
-# Create `/app` and make it the working directory (e.g. project root) for every later instruction.
+# Create `/app` and make it the directory that container starts in (i.e project root) 
+# and base for relative paths in later `RUN`, `COPY` and `CMD` instruction.
 WORKDIR /app
 
-# Non-root runtime user + data directory (rarely change -> placed early so they stay cached).
-# Fixed UID makes volume ownership predictable across rebuilds and avoids host system UIDs (<1000).
-# `--create-home` gives `/home/app`, so Prefect can write `~/.prefect`.
+# Create Non-root runtime user + data directory (rarely change -> placed early so they stay cached).
+# * Fixed UID makes volume ownership predictable across rebuilds and avoids host system UIDs (<1000).
+# * `--create-home` gives `/home/app`, so Prefect can write `~/.prefect`.
 RUN useradd --system --uid 10001 --create-home app
-# `/data` is an absolute path at the filesystem root (not under /app); owned by `app`.
-# A named volume mounted at `/data` copies this ownership on first mount.
 RUN mkdir /data && chown app:app /data
 
-# ENV sets an environment variable for later build steps and for the running container.
-# Container runs as non-root `app`, which can't write `__pycache__` into the root-owned `.venv`
-# -> compile bytecode at build time instead.
+# Ensure all uv commands in this Dockerfile compile bytecode
+# * Container runs as non-root `app`, which can't write `__pycache__` into the root-owned `.venv`
+# * -> compile bytecode at build time instead.
 ENV UV_COMPILE_BYTECODE=1
-# Keep dev dependencies (`pytest`, `ruff`) out of the runtime image; replaces `--no-dev` on every `uv sync`.
+
+# Keep development dependencies (`pytest`, `ruff`) out of the runtime image.
+# Replaces `--no-dev` on every `uv sync`.
 ENV UV_NO_DEV=1
-# Python flushes logs immediately, so output shows up in `docker logs` without delay.
+
+# Force the stdout and stderr streams to be unbuffered
+# * By default, when Python detects it is not running in interactive terminal (e.g inside a detached Docker container)
+# * It buffers `stdout` and `stderr` into blocks. This causes severe delays, making it look like your application has frozen.
 ENV PYTHONUNBUFFERED=1
-# Override the relative defaults in `config.py` so data goes to the volume, not the image layer.
+
+# Override the relative defaults in `config.py` so data goes to the volume, not the container layer
 ENV NYC_TLC_DATA_DIR=/data
 ENV NYC_TLC_DUCKDB_PATH=/data/nyc_tlc.duckdb
 
-# COPY takes space-separated sources; the last argument is the destination.
-# With multiple sources, the destination must end with `/` so it is treated as a directory.
-# Copy only the dependency files -> cached layer; editing `src/` won't re-run `uv sync`.
+# Copy the 2 files that describe my dependencies
+# * COPY takes space-separated sources; the last argument is the destination.
+# * With multiple sources, the destination must end with `/` so it is treated as directory.
 COPY pyproject.toml uv.lock ./
-# Install dependencies only (not the project itself); `--locked` fails if uv.lock is out of date.
+
+# Install the dependencies that are set in `uv.lock`
+# * `--locked`: fail the build if `uv.lock` is out of sync with `pyproject.toml`
+# * `--no-install-project`: skip own package; as `src/` isn't copied yet.
 RUN uv sync --locked --no-install-project
 
-# Install own package: README.md is required by the `uv_build` backend.
+# Copies application code and the declared files
+# * README.md is required by the `uv_build` backend as it is declared in `pyproject.toml`
 COPY README.md .
 COPY src/ ./src/
+
 # `uv sync` builds the package with the `uv_build` backend and installs it into `.venv`
-# (creates the `nyc-tlc-pipeline` and `nyc-tlc-smoke` scripts in `.venv/bin`).
+# * Creates the [project.scripts] entries (i.e.`nyc-tlc-pipeline` and `nyc-tlc-smoke`) in `.venv/bin`
 RUN uv sync --locked
-# So CMD can find the scripts without a full path.
-# `$PATH` inside `ENV` expands to the base image's current PATH.
+
+# Prepend `/app/.venv/bin` to `$PATH` (the colon-separated list of directories searched for commands)
+# * So `CMD` finds the console scripts (`nyc-tlc-pipeline`, `nyc-tlc-smoke`) without a full path; the venv's `python` also comes first.
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Switch user: everything after this line, and the running container, runs as `app`.
-# Placed after the last `uv sync` so `.venv` stays root-owned (read-only for `app`).
+# Switch user; `RUN` commands from here run from new user.
+# * Importantly, `.venv` stayed root-owned and read-only by "app" because `USER` comes after last `uv sync` 
+# * and container will be run as `app` unless there is another USER command that comes after.
 USER app
 
-# Image SHA: ARG exists only during the build; set with `--build-arg NYC_TLC_IMAGE_SHA=<sha>`.
-# Default `local` matches `config.py` and signals no SHA was passed (e.g. a quick local build).
-# Placed after the slow steps: a new value only invalidates the cache from this line on.
+# Build-only variable with a default
+# * Placed after the slow steps, a new SHA invalidates the caches from here down only
 ARG NYC_TLC_IMAGE_SHA=local
-# Carry the ARG into the running container (the smoke flow logs it).
+
+# Make it visible at run time; 
+# * Must match the `config.py` naming for the same variable else fails silently.
 ENV NYC_TLC_IMAGE_SHA=$NYC_TLC_IMAGE_SHA
 
-# Default command; compose overrides it with `nyc-tlc-smoke`.
-# JSON array (exec) form: each element is one argument, no shell in between.
-# The program runs as PID 1, so `docker stop` (SIGTERM) reaches it directly and it can shut down cleanly.
+# Sets default command that triggers automatically when the container starts
+# * Use bracketed list format to run programs in PID 1 instead of shell wrapper; to receive SIGTERM directly.
+# * Use `CMD` instead of `ENTRYPOINT` so that command can be replaced by caller instead of appending to it.
 CMD ["nyc-tlc-pipeline", "--help"]
