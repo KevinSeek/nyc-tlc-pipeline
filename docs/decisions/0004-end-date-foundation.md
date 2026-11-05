@@ -27,3 +27,7 @@ If foundation is not done by 2026-11-15, cut drill depth for the remaining files
 ## Amendment 2026-11-02
 
 Drill rewrites are not merged as code. Exception: a drill may merge comment-only changes (instructions byte-identical to `main`), because those comments are my own line-by-line explanation (rule 2). First use: Dockerfile comments.
+
+## Amendment 2026-11-05
+
+Second exception: the `ci.yml` drill rewrite merges in full, including two behaviour changes — `astral-sh/setup-uv` v10.3.0 → v10.3.3 and uv pinned with `version: "0.13.1"` (same uv as the image). Both were checked during the drill (SHA verified against the release tag with `git ls-remote`), and they are small enough that a separate step later adds no value. Verification: the PR run (`lint-and-test`) and the first `push` run on `main` after merge (`publish`). Further drill rewrites stay comment-only.
