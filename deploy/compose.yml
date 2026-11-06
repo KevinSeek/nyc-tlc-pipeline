@@ -6,5 +6,24 @@ services:
   prefect-server:
     # must match with `prefect` in `uv.lock`; server image runs its own python ver. separate from project.
     image: prefecthq/prefect:3.8.8-python3.14
-    # # replaces the image's CMD (ENTRYPOINT unchanged); starts the API + UI
+    # * replaces the image's CMD (ENTRYPOINT unchanged); starts the API + UI
     command: prefect server start
+    environment:
+      PREFECT_HOME: /var/lib/prefect
+      # 0.0.0.0 = all interfaces: needed for ports: (Docker forwards to the container's IP, not its loopback)
+      # and for other containers on the Compose network
+      # * deafult: 127.0.0.1 and only accept connection from the container itself.
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      # Being explicit; uses default
+      PREFECT_SERVER_API_PORT: 4200
+      # URL the browser (on the Mac, via ssh -L) uses to call the API (Prefect-server)
+      PREFECT_SERVER_UI_API_URL: http://127.0.0.1:4200/api
+    volumes:
+      - prefect:/var/lib/prefect
+    ports:
+      # Bind container port only to the host machine localhost port
+      - "127.0.0.1:4200:4200"
+
+volumes:
+  # Declared here, empty value
+  prefect:
