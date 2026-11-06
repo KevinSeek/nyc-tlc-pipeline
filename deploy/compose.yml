@@ -12,7 +12,7 @@ services:
       PREFECT_HOME: /var/lib/prefect
       # 0.0.0.0 = all interfaces: needed for ports: (Docker forwards to the container's IP, not its loopback)
       # and for other containers on the Compose network
-      # * deafult: 127.0.0.1 and only accept connection from the container itself.
+      # * default: 127.0.0.1 and only accept connection from the container itself.
       PREFECT_SERVER_API_HOST: 0.0.0.0
       # Being explicit; uses default
       PREFECT_SERVER_API_PORT: 4200
@@ -23,6 +23,20 @@ services:
     ports:
       # Bind container port only to the host machine localhost port
       - "127.0.0.1:4200:4200"
+    healthcheck:
+      # Run inside container; image has python but no curl
+      test: [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request as u;
+          u.urlopen(url='http://localhost:4200/api/health', timeout=2)",
+        ]
+      interval: 10s # Check every 10s
+      timeout: 5s # one check fails if it takes longer than this
+      retries: 5 # 5 failures in a row -> 'unhealthy'
+      start_period: 30s # failures during this period don't count to retries
+    restart: "unless-stopped"
 
 volumes:
   # Declared here, empty value
