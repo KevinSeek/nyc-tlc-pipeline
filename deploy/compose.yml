@@ -49,6 +49,9 @@ services:
     volumes:
       # Empty named volume copies /data and its app:app ownership from the image on first mount
       - nyc_tlc_pipeline:/data
+    depends_on:
+      prefect-server: # Service name to check for
+        condition: service_healthy # Wait for the healthcheck to pass, not just for the container to start
 
 volumes:
   # Declared here, empty value
