@@ -44,9 +44,13 @@ services:
     # Replace the CMD in the image
     command: ["nyc-tlc-smoke"]
     environment:
-      # A Prefect env variable set with doker service name. Rsolves via Compose DNS; Contanier IPs change on recreate
+      # A Prefect env variable set with Compose service name and resolves via Compose DNS; Container IPs change on recreate
       PREFECT_API_URL: http://prefect-server:4200/api
+    volumes:
+      # Empty named volume copies /data and its app:app ownership from the image on first mount
+      - nyc_tlc_pipeline:/data
 
 volumes:
   # Declared here, empty value
   prefect:
+  nyc_tlc_pipeline:
