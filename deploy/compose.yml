@@ -52,6 +52,9 @@ services:
     depends_on:
       prefect-server: # Service name to check for
         condition: service_healthy # Wait for the healthcheck to pass, not just for the container to start
+    profiles:
+      - manual
+    restart: "no" # quoted so compose will not perform type conversion to boolean.
 
 volumes:
   # Declared here, empty value
