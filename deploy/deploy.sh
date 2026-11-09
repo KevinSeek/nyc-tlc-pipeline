@@ -19,3 +19,13 @@ image_ids() {
         docker image inspect --format '{{.Id}}' "$img" 2>/dev/null || echo "missing"
     done
 }
+
+# ---- Section: Test the local image ID of `pipeline`
+# Get what is currently available local image on the machine that this script is running
+before=$(image_ids)
+
+# Name the service: a plain docker compose `pull` skips `pipeline` because of profiles: [manual].
+if ! docker compose pull --quiet pipeline; then
+    echo "deploy: PULL FAILED - kept current image"
+    exit 1
+fi
