@@ -29,3 +29,12 @@ if ! docker compose pull --quiet pipeline; then
     echo "deploy: PULL FAILED - kept current image"
     exit 1
 fi
+
+# Get the local image id after the docker pull
+after=$(image_ids)
+
+if [[ "$before" == "$after" ]]; then
+    echo "deploy: no change"
+    exit 0
+fi
+
