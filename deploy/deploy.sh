@@ -20,8 +20,7 @@ image_ids() {
     done
 }
 
-# ---- Section: Test the local image ID of `pipeline`
-# Get what is currently available local image on the machine that this script is running
+# Snapshot local image IDs before the pull (both images; `missing` on first run)
 before=$(image_ids)
 
 # Name the service: a plain docker compose `pull` skips `pipeline` because of profiles: [manual].
@@ -33,8 +32,31 @@ fi
 # Get the local image id after the docker pull
 after=$(image_ids)
 
+# Quoted both sides = literal string compare (unquoted right side would be a glob pattern).
+# * No change is the normal outcome (most runs) -> exit 0 so systemd doesn't mark the run failed.
+# * If no change to the image ID, then exit
 if [[ "$before" == "$after" ]]; then
     echo "deploy: no change"
     exit 0
 fi
 
+# Unquoted $( echo $before) folds the 2 lines into one for a single log line.
+echo "deploy: image changed: $(echo $before) -> $(echo $after)"
+
+# Assume success; `|| rc=$?` below only runs on failure, so without this
+# a successful run leaves `rc` unset and `-u` would exit the script on $rc.
+rc=0
+
+# One-off smoke run. `--rm`: remove the container after; `-T`: no TTY (none under systemd).
+# `|| rc=$?` records the exit code without letting `-e` exit before we log it.
+docker compose run --rm -T pipeline || rc=$?
+
+# `-eq` = numeric compare (exit code are numbers).
+if [[ $rc -eq 0 ]]; then
+    echo "deploy: OK - smoke flow exit=0"
+else
+    echo "deploy: SMOKE FAILED - exit=$rc"
+fi
+
+# systemd sees only the exit code -> pass on the smoke flow's own code (0 = success, non-zero = failed unit).
+exit "$rc"
