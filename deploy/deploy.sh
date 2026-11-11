@@ -2,6 +2,7 @@
 
 # Pull-based deploy for nyc-tlc. Run by nyc-tlc-deploy.service as deployer.
 # Pull the pipeline image; if it changed, run the smoke flow. Output goes to journald.
+# *No pipes yet; guards future `|` edits
 set -euo pipefail # stop on any error (-e), on unset variables (-u), and on a failure inside a pipe (pipefail)
 
 cd /opt/nyc-tlc # so Compose finds compose.yml and .env
@@ -13,7 +14,6 @@ images=$(docker compose config --images pipeline)
 
 # For each image name, print its local ID or `missing` if it isn't on homelab yet (first run).
 image_ids() {
-    # Scope `img` to function
     local img
 
     for img in $images; do
@@ -30,7 +30,7 @@ if ! docker compose pull --quiet pipeline; then
     exit 1
 fi
 
-# Get the local image id after the docker pull
+# Same function as `before`
 after=$(image_ids)
 
 # Quoted both sides = literal string compare (unquoted right side would be a glob pattern).
