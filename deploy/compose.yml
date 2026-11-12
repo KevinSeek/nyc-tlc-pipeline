@@ -1,19 +1,28 @@
-name: nyc-tlc # project name -> volume becomes "nyc-tlc_prefect", whatever the folder is called.
+# Name of the project
+# * Fragile; If omitted: name of the folder containing this file (e.g. on homelab: `/opt/nyc-tlc` → nyc-tlc)
+name: nyc-tlc
 
 services:
   prefect-server:
-    image: prefecthq/prefect:3.8.8-python3.13 # must match with `prefect` in `uv.lock`
+    # must match with `prefect` in `uv.lock`; server image runs its own python ver. separate from project.
+    image: prefecthq/prefect:3.8.8-python3.13
+    # * replaces the image's CMD (ENTRYPOINT unchanged); starts the API + UI
     command: prefect server start
     environment:
-      PREFECT_HOME: /var/lib/prefect # server state (SQLite) goes here -> on the volume
-      PREFECT_SERVER_API_HOST: 0.0.0.0 # Listen to other containers, not only itself
-      PREFECT_SERVER_UI_API_URL: http://localhost:4200/api # address the *browser on Mac* uses (via ssh -L)
+      PREFECT_HOME: /var/lib/prefect
+      # 0.0.0.0 = all interfaces: needed for ports: (Docker forwards to the container's IP, not its loopback)
+      # and for other containers on the Compose network
+      # * default: 127.0.0.1 and only accept connection from the container itself.
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      # URL the browser (on the Mac, via ssh -L) uses to call the API (Prefect-server)
+      PREFECT_SERVER_UI_API_URL: http://localhost:4200/api
     volumes:
-      - prefect:/var/lib/prefect # plug volume "prefect" in at PREFECT_HOME
+      - prefect:/var/lib/prefect
     ports:
-      - "127.0.0.1:4200:4200" # labby loopback only; quoted so YAML keeps it a string
+      # Bind container port only to the host machine localhost port
+      - "127.0.0.1:4200:4200"
     healthcheck:
-      # Run INSIDE this container; image has python, not curl
+      # Run inside container; image has python but no curl
       test:
         [
           "CMD",
@@ -24,22 +33,27 @@ services:
       interval: 10s # Check every 10s
       timeout: 5s # one check fails if it takes longer than this
       retries: 5 # 5 failures in a row -> 'unhealthy'
-      start_period: 30s # failures during startup don't count
-    restart: unless-stopped # comes back after a labby reboot, unless you stopped it manually
+      start_period: 30s # failures during this period don't count to retries
+    restart: unless-stopped
 
   pipeline:
-    image: ghcr.io/kevinseek/nyc-tlc-pipeline:${IMAGE_TAG:?IMAGE_TAG must be set in .env} # main by default; pin a SHA to roll back
-    command: ["nyc-tlc-smoke"] # overrides the image CMD (nyc-tlc-pipeline --help)
+    # main by default; pin a SHA to roll back
+    image: ghcr.io/kevinseek/nyc-tlc-pipeline:${IMAGE_TAG:?IMAGE_TAG must be set in .env}
+    # Replace the CMD in the image
+    command: ["nyc-tlc-smoke"]
     environment:
-      PREFECT_API_URL: http://prefect-server:4200/api # service name resolves via Compose DNS; container IPs change on recreate
+      # A Prefect env variable set with Compose service name and resolves via Compose DNS; Container IPs change on recreate
+      PREFECT_API_URL: http://prefect-server:4200/api
     volumes:
-      - nyc_tlc_pipeline:/data # empty named volume copies /data and its app:app ownership from the image on first mount
+      # Empty named volume copies /data and its app:app ownership from the image on first mount
+      - nyc_tlc_pipeline:/data
     depends_on:
-      prefect-server:
-        condition: service_healthy # wait for the healthcheck to pass, not just for the container to start
-    profiles: [manual] # skipped by `up -d`; started only when named: `docker compose run --rm pipeline`
-    restart: "no" # one-off job: exits 0 or 1 and stays exited; quoted because bare no is a YAML boolean
+      prefect-server: # Service name to check for
+        condition: service_healthy # Wait for the healthcheck to pass, not just for the container to start
+    profiles: [manual]
+    restart: "no" # quoted so compose will not perform type conversion to boolean.
 
 volumes:
-  prefect: # declared here, empty value
-  nyc_tlc_pipeline: # DuckDB + raw files; full name on labby: nyc-tlc_nyc_tlc_pipeline
+  # Declared here, empty value
+  prefect:
+  nyc_tlc_pipeline:
