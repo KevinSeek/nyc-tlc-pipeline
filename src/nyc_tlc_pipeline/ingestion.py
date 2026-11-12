@@ -56,7 +56,7 @@ def download_raw_from_source(url: str, tmp_path: Path, act_path: Path) -> Path:
     return act_path
 
 
-def load_raw_trips_to_duckdb(parquet_path: Path, source_month: date) -> int:
+def load_raw_trips_to_duckdb(parquet_path: Path, source_month: date, db_path: Path) -> int:
 
     # Read and get the hashvalue of the file
     with parquet_path.open("rb") as f:
@@ -82,7 +82,7 @@ def load_raw_trips_to_duckdb(parquet_path: Path, source_month: date) -> int:
     FROM read_parquet(?);
     """
 
-    with duckdb.connect(str(config.NYC_TLC_DUCKDB_PATH)) as con:
+    with duckdb.connect(str(db_path)) as con:
         con.execute(f"""CREATE SCHEMA IF NOT EXISTS {schema.RAW_SCHEMA};""")
         con.execute(
             sql_stmt,
@@ -97,7 +97,7 @@ def load_raw_trips_to_duckdb(parquet_path: Path, source_month: date) -> int:
         return con.execute(f"SELECT count(*) FROM {tbl_name}").fetchone()[0]
 
 
-def load_raw_zone_lookup_to_duckdb(csv_path: Path) -> int:
+def load_raw_zone_lookup_to_duckdb(csv_path: Path, db_path: Path) -> int:
     # Read and get the hash value of the file
     with csv_path.open("rb") as f:
         digest = hashlib.file_digest(f, "sha256").hexdigest()
@@ -120,7 +120,7 @@ def load_raw_zone_lookup_to_duckdb(csv_path: Path) -> int:
     FROM read_csv(?, all_varchar=true, header=true);
     """
 
-    with duckdb.connect(str(config.NYC_TLC_DUCKDB_PATH)) as con:
+    with duckdb.connect(str(db_path)) as con:
         con.execute(f"""CREATE SCHEMA IF NOT EXISTS {schema.RAW_SCHEMA};""")
         con.execute(
             sql_stmt,
